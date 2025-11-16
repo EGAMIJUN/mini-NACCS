@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>mini-NACCS Dashboard</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #eef1f5;
+  padding: 20px;
+}
+h1 { text-align: center; }
+
+button {
+  padding: 10px 20px;
+  margin: 5px;
+  font-size: 16px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 4px;
+}
+
+.light {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-left: 10px;
+  background: #999;
+}
+.light.on {
+  background: #22c55e;
+  animation: blink 1s infinite;
+}
+@keyframes blink {
+  50% { opacity: 0.2; }
+}
+
+#consoleBox {
+  background: black;
+  color: #00ff00;
+  padding: 10px;
+  height: 300px;
+  overflow-y: scroll;
+  white-space: pre-wrap;
+  border-radius: 6px;
+  font-family: monospace;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎛 mini-NACCS Dashboard</h1>
+
+<div style="text-align:center;">
+  <button onclick="runNx()">NxReceive 実行</button>
+  <button onclick="runFollow()">FollowJob 実行</button>
+  <button onclick="startAuto()">自動モード ON</button>
+  <button onclick="stopAuto()">自動モード OFF</button>
+  <span id="autoLight" class="light"></span>
+</div>
+
+<h2>📡 実行ログ（リアルタイム）</h2>
+<div id="consoleBox"></div>
+
+<script>
+async function runNx() {
+  await fetch("/api/run-nx", { method: "POST" });
+}
+
+async function runFollow() {
+  await fetch("/api/run-follow", { method: "POST" });
+}
+
+async function startAuto() {
+  await fetch("/api/auto/start", { method: "POST" });
+}
+
+async function stopAuto() {
+  await fetch("/api/auto/stop", { method: "POST" });
+}
+
+async function update() {
+  try {
+    // 自動モードのランプ
+    const auto = await fetch("/api/auto/status").then(r => r.json());
+    const light = document.getElementById("autoLight");
+    if (auto.enabled) light.classList.add("on");
+    else light.classList.remove("on");
+
+    // ログ反映
+    const logData = await fetch("/api/logs").then(r => r.json());
+    const box = document.getElementById("consoleBox");
+    box.innerText = (logData.logs || []).join("\n");
+    box.scrollTop = box.scrollHeight;
+  } catch (e) {
+    console.error("update error", e);
+  }
+}
+
+// 1.5秒ごとにUI更新
+setInterval(update, 1500);
+update();
+</script>
+
+</body>
+</html>

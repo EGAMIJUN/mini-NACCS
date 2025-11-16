@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>mini NACCS → SXGW → FollowJob 可視化</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    .lane {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 40px;
+      gap: 20px;
+    }
+    .box {
+      flex: 1;
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .title {
+      font-weight: bold;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      background: #eee;
+      margin-right: 4px;
+    }
+    .arrow {
+      text-align: center;
+      font-size: 24px;
+      margin-top: 10px;
+    }
+    .note {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+    ul {
+      margin: 4px 0 0 16px;
+      padding: 0;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h1>mini NACCS → SXGW → PORT-IT（疑似システムの流れ）</h1>
+
+  <div class="lane">
+    <div class="box">
+      <div class="title">① mini-NACCS（MiniNaccsGen）</div>
+      <span class="tag">アプリ</span>
+      <p class="note">コンソールで入力 → NACCS 風の電文ファイルを生成</p>
+      <ul>
+        <li>ファイル出力先: <code>/Users/egamijun/NaccsInbox</code></li>
+        <li>HDR / DTL 行を持つテキスト</li>
+      </ul>
+    </div>
+
+    <div class="arrow">➡</div>
+
+    <div class="box">
+      <div class="title">② NxReceive（SXGW 受信）</div>
+      <span class="tag">ジョブ</span>
+      <p class="note">NaccsInbox のファイルを読み、通知テーブルに登録</p>
+      <ul>
+        <li>読み込み: <code>NaccsInbox/*.txt</code></li>
+        <li>INSERT: <code>T_NaxTantei (Status = 'WAIT')</code></li>
+        <li>処理済みファイルは <code>NaccsProcessed</code> へ移動</li>
+      </ul>
+    </div>
+
+    <div class="arrow">➡</div>
+
+    <div class="box">
+      <div class="title">③ T_NaxTantei（SXGW 通知テーブル）</div>
+      <span class="tag">DBテーブル</span>
+      <p class="note">NACCS 通知を一時的に貯める場所</p>
+      <ul>
+        <li>キー: <code>VslCode, VoyNo, ContainerNo</code></li>
+        <li>許可日: <code>PermitDate</code></li>
+        <li>許可時刻: <code>PermitTime</code></li>
+        <li>状態: <code>Status = WAIT / DONE / ERROR</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="lane">
+    <div class="box">
+      <div class="title">④ FollowJob（後続JOB）</div>
+      <span class="tag">ジョブ</span>
+      <p class="note">未処理通知 (WAIT) を読んで、コンテナ本体を更新</p>
+      <ul>
+        <li><code>T_NaxTantei</code> から WAIT を取得</li>
+        <li><code>T_CyContainer</code> を検索（船＋Voy＋コンテナ）</li>
+        <li>見つかれば → 許可情報を UPDATE</li>
+        <li>通知側は DONE / ERROR に変更</li>
+      </ul>
+    </div>
+
+    <div class="arrow">➡</div>
+
+    <div class="box">
+      <div class="title">⑤ T_CyContainer（コンテナ在庫）</div>
+      <span class="tag">DBテーブル</span>
+      <p class="note">港湾システム本体のコンテナ情報</p>
+      <ul>
+        <li>キー: <code>VslCode, VoyNo, ContainerNo</code></li>
+        <li>許可フラグ: <code>PermitFlag (0→1)</code></li>
+        <li>許可日時: <code>PermitDateTime</code></li>
+        <li>最終 NACCS メッセージ: <code>LastNaccsMsg</code></li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
